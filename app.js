@@ -3,6 +3,9 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import fileUpload from 'express-fileupload';
+import connectDB from './database/dbConnection.js';
+import { errorMiddleware } from './middleware/Error.js';
+
 // express() creates a function that is both for  handles requests and a container for middleware and routes. 
 const app = express();
 dotenv.config({path: './config/.env'});
@@ -26,6 +29,10 @@ app.use(fileUpload({
     useTempFiles: true,
     tempFileDir: '/tmp/',
 }));
+
+connectDB();
+
+app.use(errorMiddleware);
 
 
 

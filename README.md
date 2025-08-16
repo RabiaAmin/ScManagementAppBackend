@@ -72,6 +72,6 @@ npm run build
 This project is licensed under the MIT License – you are free to use, modify, and distribute it.
 
 👨‍💻 Author
-Your Name
+Rabia Ali
 💼 GitHub: RabiaAmin
 📧 Email: rabia10march@gmail.com
