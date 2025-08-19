@@ -69,7 +69,7 @@ userSchema.methods.comparePassword = async function(enteredPassword){
 userSchema.methods.generateJsonWEbToken =  function (){
 return jwt.sign(
         { _id: this._id },
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET_KEY,
         { expiresIn: process.env.JWT_EXPIRES }
     );
 }

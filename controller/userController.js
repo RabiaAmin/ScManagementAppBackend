@@ -1,17 +1,17 @@
-import { catchAsyncErrors } from "../middleware/catchAsyncErrors.js";
+import { catchAsyncErrors } from "../middleware/CatchAsynErrors.js";
 import ErrorHandler from "../middleware/Error.js";
-import { User } from "../models/user.model.js";
+import { User } from "../model/user.model.js";
 import { v2 as cloudinary } from "cloudinary";
-import { generateToken } from "../utils/jwtToken.js";
-import { sendEmail } from "../utils/sendEmail.js";
+import { generateToken } from "../utils/JwtToken.js";
+// import { sendEmail } from "../utils/sendEmail.js";
 import crypto from "crypto";
 
 export const register = catchAsyncErrors(async (req, res, next) => {
   if (!req.files || Object.keys(req.files).length === 0) {
-    return next(new ErrorHandler("Avatar And Resume Are Required!", 400));
+    return next(new ErrorHandler("Avatar is Required!", 400));
   }
 
-  const { avatar, resume } = req.files;
+  const { avatar } = req.files;
 
   const cloudinaryResponseForAvatar = await cloudinary.uploader.upload(
     avatar.tempFilePath,
@@ -26,18 +26,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     );
   }
 
-  const cloudinaryResponseForResume = await cloudinary.uploader.upload(
-    resume.tempFilePath,
-    {
-      folder: "RESUME",
-    }
-  );
-  if (!cloudinaryResponseForResume || cloudinaryResponseForResume.error) {
-    console.error(
-      "cloudinary Error:",
-      cloudinaryResponseForResume.error || "unknown Cloudinary Error"
-    );
-  }
+
 
   const {
     username,
@@ -45,11 +34,7 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     phone,
     password,
     aboutMe,
-    githubUrl,
-    instagramUrl,
-    facebookUrl,
-    linkedInUrl,
-    portfolioUrl,
+  
   } = req.body;
 
   const user = await User.create({
@@ -58,19 +43,12 @@ export const register = catchAsyncErrors(async (req, res, next) => {
     phone,
     password,
     aboutMe,
-    githubUrl,
-    instagramUrl,
-    facebookUrl,
-    linkedInUrl,
-    portfolioUrl,
+   
     avatar: {
       public_id: cloudinaryResponseForAvatar.public_id,
       url: cloudinaryResponseForAvatar.secure_url,
     },
-    resume: {
-      public_id: cloudinaryResponseForResume.public_id,
-      url: cloudinaryResponseForResume.secure_url,
-    },
+   
   });
 
   generateToken(user, "user Registered!", 201, res);
@@ -105,8 +83,8 @@ export const logout = catchAsyncErrors(async (req, res, next) => {
     .cookie("token", "", {
       expires: new Date(Date.now()),
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "None",
+      secure: false,
+      sameSite: "Lax",
     })
     .json({
       success: true,
@@ -127,170 +105,163 @@ export const getUser = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-export const profileUpdate = catchAsyncErrors(async (req, res, next) => {
-  const newUserData = {
-    username: req.body.username,
-    email: req.body.email,
-    phone: req.body.phone,
-    aboutMe: req.body.aboutMe,
-    githubUrl: req.body.githubUrl,
-    instagramUrl: req.body.instagramUrl,
-    facebookUrl: req.body.facebookUrl,
-    linkedInUrl: req.body.linkedInUrl,
-  };
+// export const profileUpdate = catchAsyncErrors(async (req, res, next) => {
+//   const newUserData = {
+//     username: req.body.username,
+//     email: req.body.email,
+//     phone: req.body.phone,
+//     aboutMe: req.body.aboutMe,
+//     githubUrl: req.body.githubUrl,
+//     instagramUrl: req.body.instagramUrl,
+//     facebookUrl: req.body.facebookUrl,
+//     linkedInUrl: req.body.linkedInUrl,
+//   };
 
-  if (req.files && req.files.avatar) {
-    const avatar = req.files.avatar;
-    const user = await User.findById(req.user._id);
-    const profileImageId = user.avatar.public_id;
-    await cloudinary.uploader.destroy(profileImageId);
+//   if (req.files && req.files.avatar) {
+//     const avatar = req.files.avatar;
+//     const user = await User.findById(req.user._id);
+//     const profileImageId = user.avatar.public_id;
+//     await cloudinary.uploader.destroy(profileImageId);
 
-    const cloudinaryResponse = await cloudinary.uploader.upload(
-      avatar.tempFilePath,
-      {
-        folder: "AVATARS",
-      }
-    );
+//     const cloudinaryResponse = await cloudinary.uploader.upload(
+//       avatar.tempFilePath,
+//       {
+//         folder: "AVATARS",
+//       }
+//     );
 
-    newUserData.avatar = {
-      public_id: cloudinaryResponse.public_id,
-      url: cloudinaryResponse.secure_url,
-    };
-  }
+//     newUserData.avatar = {
+//       public_id: cloudinaryResponse.public_id,
+//       url: cloudinaryResponse.secure_url,
+//     };
+//   }
 
-  if (req.files && req.files.resume) {
-    const resume = req.files.resume;
-    const user = await User.findById(req.user._id);
-    const profileImageId = user.resume.public_id;
-    await cloudinary.uploader.destroy(profileImageId);
+//   if (req.files && req.files.resume) {
+//     const resume = req.files.resume;
+//     const user = await User.findById(req.user._id);
+//     const profileImageId = user.resume.public_id;
+//     await cloudinary.uploader.destroy(profileImageId);
 
-    const cloudinaryResponse = await cloudinary.uploader.upload(
-      resume.tempFilePath,
-      {
-        folder: "RESUME",
-      }
-    );
+//     const cloudinaryResponse = await cloudinary.uploader.upload(
+//       resume.tempFilePath,
+//       {
+//         folder: "RESUME",
+//       }
+//     );
 
-    newUserData.resume = {
-      public_id: cloudinaryResponse.public_id,
-      url: cloudinaryResponse.secure_url,
-    };
-  }
+//     newUserData.resume = {
+//       public_id: cloudinaryResponse.public_id,
+//       url: cloudinaryResponse.secure_url,
+//     };
+//   }
 
-  const updatedUser = await User.findByIdAndUpdate(req.user._id, newUserData, {
-    new: true,
-    runValidators: true,
-  });
+//   const updatedUser = await User.findByIdAndUpdate(req.user._id, newUserData, {
+//     new: true,
+//     runValidators: true,
+//   });
 
-  res.status(200).json({
-    success: true,
-    message: "Profile Updated",
-    updatedUser,
-  });
-});
+//   res.status(200).json({
+//     success: true,
+//     message: "Profile Updated",
+//     updatedUser,
+//   });
+// });
 
-export const updatePassword = catchAsyncErrors(async (req, res, next) => {
-  const { currentPassword, newPassword, confirmNewPassword } = req.body;
-  if (!currentPassword || !newPassword || !confirmNewPassword) {
-    return next(new ErrorHandler("Please Fill All Fields:", 400));
-  }
-  const user = await User.findById(req.user._id).select("+password");
-  const isPasswordMatched = await user.comparePassword(currentPassword);
-  if (!isPasswordMatched) {
-    return next(new ErrorHandler("Incorrect Current Password", 400));
-  }
+// export const updatePassword = catchAsyncErrors(async (req, res, next) => {
+//   const { currentPassword, newPassword, confirmNewPassword } = req.body;
+//   if (!currentPassword || !newPassword || !confirmNewPassword) {
+//     return next(new ErrorHandler("Please Fill All Fields:", 400));
+//   }
+//   const user = await User.findById(req.user._id).select("+password");
+//   const isPasswordMatched = await user.comparePassword(currentPassword);
+//   if (!isPasswordMatched) {
+//     return next(new ErrorHandler("Incorrect Current Password", 400));
+//   }
 
-  if (newPassword !== confirmNewPassword) {
-    return next(
-      new ErrorHandler(
-        "New Password And Confirm New Password Do Not Match",
-        400
-      )
-    );
-  }
+//   if (newPassword !== confirmNewPassword) {
+//     return next(
+//       new ErrorHandler(
+//         "New Password And Confirm New Password Do Not Match",
+//         400
+//       )
+//     );
+//   }
 
-  user.password = newPassword;
+//   user.password = newPassword;
 
-  await user.save();
-  res.status(200).json({
-    success: true,
-    message: "Password Updated!",
-  });
-});
+//   await user.save();
+//   res.status(200).json({
+//     success: true,
+//     message: "Password Updated!",
+//   });
+// });
 
-// rotues for frontend
-export const getUserForPortfolio = catchAsyncErrors(async (req, res, next) => {
-  const id = `${process.env.USER_ID}`;
-  const user = await User.findById(id);
-  res.status(200).json({
-    success: true,
-    user,
-  });
-});
+// // rotues for frontend
 
-export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
-  const user = await User.findOne({ email: req.body.email });
-  if (!user) {
-    return next(new ErrorHandler("User Not Found", 404));
-  }
 
-  const resetToken = user.getResetPasswordToken();
+// export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
+//   const user = await User.findOne({ email: req.body.email });
+//   if (!user) {
+//     return next(new ErrorHandler("User Not Found", 404));
+//   }
 
-  await user.save({ validateBeforeSave: false });
+//   const resetToken = user.getResetPasswordToken();
 
-  const resetPasswordUrl = `${process.env.DASHBOARD_URL}/password/reset/${resetToken}`;
+//   await user.save({ validateBeforeSave: false });
 
-  const message = `Your Reset Password Token is : \n \n ${resetPasswordUrl} \n \n If You'r Not Request For This Please Ignore It.`;
+//   const resetPasswordUrl = `${process.env.DASHBOARD_URL}/password/reset/${resetToken}`;
 
-  try {
-    await sendEmail({
-      email: user.email,
-      subject: "Personal Portfolio Dashboard Recovery Password",
-      message,
-    });
+//   const message = `Your Reset Password Token is : \n \n ${resetPasswordUrl} \n \n If You'r Not Request For This Please Ignore It.`;
 
-    res.status(200).json({
-      success: true,
-      message: `Email Sent  to ${user.email} Successfully!`,
-    });
-  } catch (error) {
-    user.resetPasswordExpire = undefined;
-    user.resetPasswordToken = undefined;
+//   try {
+//     await sendEmail({
+//       email: user.email,
+//       subject: "Personal Portfolio Dashboard Recovery Password",
+//       message,
+//     });
 
-    await user.save();
-    return next(new ErrorHandler(error.message, 500));
-  }
-});
+//     res.status(200).json({
+//       success: true,
+//       message: `Email Sent  to ${user.email} Successfully!`,
+//     });
+//   } catch (error) {
+//     user.resetPasswordExpire = undefined;
+//     user.resetPasswordToken = undefined;
 
-export const resetPassword = catchAsyncErrors(async (req, res, next) => {
-  const { token } = req.params;
-  const resetPasswordToken = crypto
-    .createHash("sha256")
-    .update(token)
-    .digest("hex");
+//     await user.save();
+//     return next(new ErrorHandler(error.message, 500));
+//   }
+// });
 
-  const user = await User.findOne({
-    resetPasswordToken,
-    resetPasswordExpire: { $gt: Date.now() },
-  });
+// export const resetPassword = catchAsyncErrors(async (req, res, next) => {
+//   const { token } = req.params;
+//   const resetPasswordToken = crypto
+//     .createHash("sha256")
+//     .update(token)
+//     .digest("hex");
 
-  if (!user) {
-    return next(
-      new ErrorHandler(
-        "Reset Password Token Is Invalid or Has Been Expired!",
-        400
-      )
-    );
-  }
+//   const user = await User.findOne({
+//     resetPasswordToken,
+//     resetPasswordExpire: { $gt: Date.now() },
+//   });
 
-  if (req.body.password !== req.body.confirmPassword) {
-    return next(new ErrorHandler("Password And ConfirmPassword Do Not Match!"));
-  }
+//   if (!user) {
+//     return next(
+//       new ErrorHandler(
+//         "Reset Password Token Is Invalid or Has Been Expired!",
+//         400
+//       )
+//     );
+//   }
 
-  user.password = req.body.password;
-  user.resetPasswordExpire = undefined;
-  user.resetPasswordToken = undefined;
-  await user.save();
+//   if (req.body.password !== req.body.confirmPassword) {
+//     return next(new ErrorHandler("Password And ConfirmPassword Do Not Match!"));
+//   }
 
-  generateToken(user, "Reset Password Successfully!", 200, res);
-});
+//   user.password = req.body.password;
+//   user.resetPasswordExpire = undefined;
+//   user.resetPasswordToken = undefined;
+//   await user.save();
+
+//   generateToken(user, "Reset Password Successfully!", 200, res);
+// });

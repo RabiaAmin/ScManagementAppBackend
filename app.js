@@ -1,10 +1,11 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
-import cookieParser from 'cookie-parser';
+import cookieParser from "cookie-parser";
 import fileUpload from 'express-fileupload';
 import connectDB from './database/dbConnection.js';
 import { errorMiddleware } from './middleware/Error.js';
+import userRoute from './routes/userRoute.js';
 
 // express() creates a function that is both for  handles requests and a container for middleware and routes. 
 const app = express();
@@ -29,6 +30,10 @@ app.use(fileUpload({
     useTempFiles: true,
     tempFileDir: '/tmp/',
 }));
+
+//this is the route for user-related operations.
+
+app.use("/api/v1/user",userRoute);
 
 connectDB();
 
