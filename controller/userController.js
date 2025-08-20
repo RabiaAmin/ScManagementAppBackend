@@ -3,7 +3,7 @@ import ErrorHandler from "../middleware/Error.js";
 import { User } from "../model/user.model.js";
 import { v2 as cloudinary } from "cloudinary";
 import { generateToken } from "../utils/JwtToken.js";
-// import { sendEmail } from "../utils/sendEmail.js";
+import { sendEmail } from "../utils/sendEmail.js";
 import crypto from "crypto";
 
 export const register = catchAsyncErrors(async (req, res, next) => {
@@ -105,163 +105,141 @@ export const getUser = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-// export const profileUpdate = catchAsyncErrors(async (req, res, next) => {
-//   const newUserData = {
-//     username: req.body.username,
-//     email: req.body.email,
-//     phone: req.body.phone,
-//     aboutMe: req.body.aboutMe,
-//     githubUrl: req.body.githubUrl,
-//     instagramUrl: req.body.instagramUrl,
-//     facebookUrl: req.body.facebookUrl,
-//     linkedInUrl: req.body.linkedInUrl,
-//   };
+export const profileUpdate = catchAsyncErrors(async (req, res, next) => {
+  const newUserData = {
+    username: req.body.username,
+    email: req.body.email,
+    phone: req.body.phone,
+    aboutMe: req.body.aboutMe,
+  };
 
-//   if (req.files && req.files.avatar) {
-//     const avatar = req.files.avatar;
-//     const user = await User.findById(req.user._id);
-//     const profileImageId = user.avatar.public_id;
-//     await cloudinary.uploader.destroy(profileImageId);
+  if (req.files && req.files.avatar) {
+    const avatar = req.files.avatar;
+    const user = await User.findById(req.user._id);
+    const profileImageId = user.avatar.public_id;
+    await cloudinary.uploader.destroy(profileImageId);
 
-//     const cloudinaryResponse = await cloudinary.uploader.upload(
-//       avatar.tempFilePath,
-//       {
-//         folder: "AVATARS",
-//       }
-//     );
+    const cloudinaryResponse = await cloudinary.uploader.upload(
+      avatar.tempFilePath,
+      {
+        folder: "AVATARS",
+      }
+    );
 
-//     newUserData.avatar = {
-//       public_id: cloudinaryResponse.public_id,
-//       url: cloudinaryResponse.secure_url,
-//     };
-//   }
+    newUserData.avatar = {
+      public_id: cloudinaryResponse.public_id,
+      url: cloudinaryResponse.secure_url,
+    };
+  }
 
-//   if (req.files && req.files.resume) {
-//     const resume = req.files.resume;
-//     const user = await User.findById(req.user._id);
-//     const profileImageId = user.resume.public_id;
-//     await cloudinary.uploader.destroy(profileImageId);
 
-//     const cloudinaryResponse = await cloudinary.uploader.upload(
-//       resume.tempFilePath,
-//       {
-//         folder: "RESUME",
-//       }
-//     );
+  const updatedUser = await User.findByIdAndUpdate(req.user._id, newUserData, {
+    new: true,
+    runValidators: true,
+  });
 
-//     newUserData.resume = {
-//       public_id: cloudinaryResponse.public_id,
-//       url: cloudinaryResponse.secure_url,
-//     };
-//   }
+  res.status(200).json({
+    success: true,
+    message: "Profile Updated",
+    updatedUser,
+  });
+});
 
-//   const updatedUser = await User.findByIdAndUpdate(req.user._id, newUserData, {
-//     new: true,
-//     runValidators: true,
-//   });
+export const updatePassword = catchAsyncErrors(async (req, res, next) => {
+  const { currentPassword, newPassword, confirmNewPassword } = req.body;
+  if (!currentPassword || !newPassword || !confirmNewPassword) {
+    return next(new ErrorHandler("Please Fill All Fields:", 400));
+  }
+  const user = await User.findById(req.user._id).select("+password");
+  const isPasswordMatched = await user.comparePassword(currentPassword);
+  if (!isPasswordMatched) {
+    return next(new ErrorHandler("Incorrect Current Password", 400));
+  }
 
-//   res.status(200).json({
-//     success: true,
-//     message: "Profile Updated",
-//     updatedUser,
-//   });
-// });
+  if (newPassword !== confirmNewPassword) {
+    return next(
+      new ErrorHandler(
+        "New Password And Confirm New Password Do Not Match",
+        400
+      )
+    );
+  }
 
-// export const updatePassword = catchAsyncErrors(async (req, res, next) => {
-//   const { currentPassword, newPassword, confirmNewPassword } = req.body;
-//   if (!currentPassword || !newPassword || !confirmNewPassword) {
-//     return next(new ErrorHandler("Please Fill All Fields:", 400));
-//   }
-//   const user = await User.findById(req.user._id).select("+password");
-//   const isPasswordMatched = await user.comparePassword(currentPassword);
-//   if (!isPasswordMatched) {
-//     return next(new ErrorHandler("Incorrect Current Password", 400));
-//   }
+  user.password = newPassword;
 
-//   if (newPassword !== confirmNewPassword) {
-//     return next(
-//       new ErrorHandler(
-//         "New Password And Confirm New Password Do Not Match",
-//         400
-//       )
-//     );
-//   }
-
-//   user.password = newPassword;
-
-//   await user.save();
-//   res.status(200).json({
-//     success: true,
-//     message: "Password Updated!",
-//   });
-// });
+  await user.save();
+  res.status(200).json({
+    success: true,
+    message: "Password Updated!",
+  });
+});
 
 // // rotues for frontend
 
 
-// export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
-//   const user = await User.findOne({ email: req.body.email });
-//   if (!user) {
-//     return next(new ErrorHandler("User Not Found", 404));
-//   }
+export const forgotPassword = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) {
+    return next(new ErrorHandler("User Not Found", 404));
+  }
 
-//   const resetToken = user.getResetPasswordToken();
+  const resetToken = user.getResetPasswordToken();
 
-//   await user.save({ validateBeforeSave: false });
+  await user.save({ validateBeforeSave: false });
 
-//   const resetPasswordUrl = `${process.env.DASHBOARD_URL}/password/reset/${resetToken}`;
+  const resetPasswordUrl = `${process.env.FRONTEND_URL}/password/reset/${resetToken}`;
 
-//   const message = `Your Reset Password Token is : \n \n ${resetPasswordUrl} \n \n If You'r Not Request For This Please Ignore It.`;
+  const message = `Your Reset Password Token is : \n \n ${resetPasswordUrl} \n \n If You'r Not Request For This Please Ignore It.`;
 
-//   try {
-//     await sendEmail({
-//       email: user.email,
-//       subject: "Personal Portfolio Dashboard Recovery Password",
-//       message,
-//     });
+  try {
+    await sendEmail({
+      email: user.email,
+      subject: "Sania Clothing Dashboard Recovery Password",
+      message,
+    });
 
-//     res.status(200).json({
-//       success: true,
-//       message: `Email Sent  to ${user.email} Successfully!`,
-//     });
-//   } catch (error) {
-//     user.resetPasswordExpire = undefined;
-//     user.resetPasswordToken = undefined;
+    res.status(200).json({
+      success: true,
+      message: `Email Sent  to ${user.email} Successfully!`,
+    });
+  } catch (error) {
+    user.resetPasswordExpire = undefined;
+    user.resetPasswordToken = undefined;
 
-//     await user.save();
-//     return next(new ErrorHandler(error.message, 500));
-//   }
-// });
+    await user.save();
+    return next(new ErrorHandler(error.message, 500));
+  }
+});
 
-// export const resetPassword = catchAsyncErrors(async (req, res, next) => {
-//   const { token } = req.params;
-//   const resetPasswordToken = crypto
-//     .createHash("sha256")
-//     .update(token)
-//     .digest("hex");
+export const resetPassword = catchAsyncErrors(async (req, res, next) => {
+  const { token } = req.params;
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
 
-//   const user = await User.findOne({
-//     resetPasswordToken,
-//     resetPasswordExpire: { $gt: Date.now() },
-//   });
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
 
-//   if (!user) {
-//     return next(
-//       new ErrorHandler(
-//         "Reset Password Token Is Invalid or Has Been Expired!",
-//         400
-//       )
-//     );
-//   }
+  if (!user) {
+    return next(
+      new ErrorHandler(
+        "Reset Password Token Is Invalid or Has Been Expired!",
+        400
+      )
+    );
+  }
 
-//   if (req.body.password !== req.body.confirmPassword) {
-//     return next(new ErrorHandler("Password And ConfirmPassword Do Not Match!"));
-//   }
+  if (req.body.password !== req.body.confirmPassword) {
+    return next(new ErrorHandler("Password And ConfirmPassword Do Not Match!"));
+  }
 
-//   user.password = req.body.password;
-//   user.resetPasswordExpire = undefined;
-//   user.resetPasswordToken = undefined;
-//   await user.save();
+  user.password = req.body.password;
+  user.resetPasswordExpire = undefined;
+  user.resetPasswordToken = undefined;
+  await user.save();
 
-//   generateToken(user, "Reset Password Successfully!", 200, res);
-// });
+  generateToken(user, "Reset Password Successfully!", 200, res);
+});
