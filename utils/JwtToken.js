@@ -2,7 +2,7 @@
 //this file is responsible for generating JWT tokens and sending them in the response
 export const generateToken = (user, message, statusCode, res) => {
     const token = user.generateJsonWEbToken();
-   console.log("Generated JWT Token:", token); // debug
+  
     res.status(statusCode)
        .cookie("token", token, {
            expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES * 24 * 60 * 60 * 1000),
