@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 const clientSchema = new mongoose.Schema({
   name: { type: String, required: true },
   vatNumber: { type: String },
@@ -6,6 +7,8 @@ const clientSchema = new mongoose.Schema({
   phone: { type: String },
   fax: { type: String },
   email: { type: String },
+  telphone: { type: String },
+ 
 });
 
 export const ClientCollection = mongoose.model("Client", clientSchema);

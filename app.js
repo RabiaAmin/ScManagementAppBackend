@@ -8,7 +8,7 @@ import { errorMiddleware } from './middleware/Error.js';
 import userRoute from './routes/userRoute.js';
 import businessRoute from './routes/businessRoute.js';
 import clientRoute from './routes/clientRoute.js';
-import invoiceRoute from './routes/invoiceRoute.js';
+// import invoiceRoute from './routes/invoiceRoute.js';
 
 // express() creates a function that is both for  handles requests and a container for middleware and routes. 
 const app = express();
@@ -38,8 +38,8 @@ app.use(fileUpload({
 
 app.use("/api/v1/user",userRoute);
 app.use("/api/v1/business",businessRoute);
-app.use("/api/v1/business/client",clientRoute);
-app.use("/api/v1/business/invoice",invoiceRoute);
+app.use("/api/v1/client",clientRoute);
+// app.use("/api/v1/business/invoice",invoiceRoute);
 
 
 
