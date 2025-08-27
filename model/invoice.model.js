@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 const invoiceSchema = new mongoose.Schema({
   invoiceNumber: { type: String, required: true, unique: true },
   date: { type: Date, default: Date.now },
@@ -7,12 +8,12 @@ const invoiceSchema = new mongoose.Schema({
     {
       quantity: Number,
       description: String,
-      rate: Number,
+      unitPrice: Number,
       amount: Number
     }
   ],
   subTotal: { type: Number, required: true },
-  vatAmount: { type: Number },
+  tax: { type: Number },
   totalAmount: { type: Number, required: true },
   status: { 
     type: String, 

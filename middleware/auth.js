@@ -8,7 +8,7 @@ import jwt from "jsonwebtoken";
 // If the token is invalid or not present, it returns an error response.
 export const isAuthenticated = catchAsyncErrors(async (req, res, next) => {
   const { token } = req.cookies;
-  console.log("JWT Token:", token); // debug
+
   if (!token) {
     return next(new ErrorHandler("User Not Authenticated!", 400));
   }
