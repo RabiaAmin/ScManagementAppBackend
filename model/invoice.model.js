@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 const invoiceSchema = new mongoose.Schema({
   invoiceNumber: { type: String, required: true, unique: true },
+  poNumber: { type: String ,required:true,unique: true  },
   date: { type: Date, default: Date.now },
   fromBusiness: { type: mongoose.Schema.Types.ObjectId, ref: "Business" },
   toClient: { type: mongoose.Schema.Types.ObjectId, ref: "Client" },

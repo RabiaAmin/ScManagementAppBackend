@@ -4,7 +4,7 @@ import ErrorHandler from "../middleware/Error.js";
 
 
 export const createInvoice = catchAsyncErrors(async (req, res, next)=>{
-    const { invoiceNumber, date, fromBusiness, toClient, items, subTotal, tax, totalAmount, status } = req.body;
+    const { invoiceNumber, date, fromBusiness, toClient, items, subTotal, tax, totalAmount, status ,poNumber } = req.body;
 
     if (!invoiceNumber || !fromBusiness || !toClient || !items || !subTotal || !totalAmount) {
         return next(new ErrorHandler("Please provide all required fields", 400));
@@ -12,6 +12,7 @@ export const createInvoice = catchAsyncErrors(async (req, res, next)=>{
 
     const invoice = await Invoice.create({
         invoiceNumber,
+        poNumber,
         date,
         fromBusiness,
         toClient,
@@ -33,7 +34,8 @@ export const updateInvoice = catchAsyncErrors(async (req, res, next)=>{
    
 
     const updatedInvoice = {
-        name: req.body.name,
+        invoiceNumber: req.body.invoiceNumber,
+        poNumber: req.body.poNumber,
         date: req.body.date,
         fromBusiness: req.body.fromBusiness,
         toClient: req.body.toClient,
