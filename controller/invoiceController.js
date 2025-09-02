@@ -1,12 +1,14 @@
 import { catchAsyncErrors } from "../middleware/CatchAsynErrors.js";
 import {Invoice} from "../model/invoice.model.js";
 import ErrorHandler from "../middleware/Error.js";
+import { generateInvoiceNumber } from "../utils/GenerateInvoiceNumber.js";
 
 
 export const createInvoice = catchAsyncErrors(async (req, res, next)=>{
-    const { invoiceNumber, date, fromBusiness, toClient, items, subTotal, tax, totalAmount, status ,poNumber } = req.body;
-
-    if (!invoiceNumber || !fromBusiness || !toClient || !items || !subTotal || !totalAmount) {
+    const {  date, fromBusiness, toClient,items, subTotal, tax, totalAmount, status ,poNumber } = req.body;
+   
+    const invoiceNumber = await generateInvoiceNumber();
+    if (  !fromBusiness || !toClient || !items || !subTotal || !totalAmount) {
         return next(new ErrorHandler("Please provide all required fields", 400));
     }
 
