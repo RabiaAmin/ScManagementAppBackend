@@ -106,5 +106,48 @@ export const getAllInvoice = catchAsyncErrors(async (req, res, next)=>{
 } );
 
 
+export const getWeeklyStatements = catchAsyncErrors(async (req, res, next) => {
+  const { startDate, endDate } = req.query;
+
+  if (!startDate || !endDate) {
+    return next(new ErrorHandler("Start date and end date are required", 400));
+  }
+
+  const invoices = await Invoice.aggregate([
+    {
+      $match: {
+        date: { $gte: new Date(startDate), $lte: new Date(endDate) },
+      },
+    },
+    {
+      $lookup: {
+        from: "clients",           // collection name in MongoDB
+        localField: "toClient",
+        foreignField: "_id",
+        as: "client",
+      },
+    },
+    { $unwind: "$client" },       // deconstruct the array
+    {
+      $group: {
+        _id: "$client.name",       // group by client name
+        totalInvoices: { $sum: 1 },
+        totalAmount: { $sum: "$totalAmount" },
+        invoices: { $push: "$$ROOT" },
+      },
+    },
+    { $sort: { _id: 1 } },
+  ]);
+
+  res.status(200).json({
+    success: true,
+    statements: invoices,
+  });
+});
+
+
+
+
+
 
 
