@@ -95,7 +95,17 @@ export const getInvoice = catchAsyncErrors(async (req, res, next)=>{
 
 
 export const getAllInvoice = catchAsyncErrors(async (req, res, next)=>{
-    const invoices = await Invoice.find();
+   const { startDate, endDate } = req.query;
+
+    let filter = {};
+
+    if (startDate && endDate) {
+        filter.date = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+        };
+    }
+    const invoices = await Invoice.find(filter);
     if (!invoices) {
         return next(new ErrorHandler("No invoices found", 404));
     }
