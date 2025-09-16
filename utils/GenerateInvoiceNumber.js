@@ -1,17 +1,11 @@
-import { Invoice } from "../model/invoice.model.js"; // adjust path if needed
+import { Counter } from "../model/counter.model.js";
 
 export const generateInvoiceNumber = async () => {
-  // Find the last invoice regardless of year
-  const lastInvoice = await Invoice.findOne()
-    .sort({ invoiceNumber: -1 }) // sort by invoiceNumber descending
-    .exec();
+  const counter = await Counter.findOneAndUpdate(
+    { name: "invoice" },
+    { $inc: { value: 1 } },
+    { new: true, upsert: true }
+  );
 
-  let nextNumber = 311; // starting point
-
-  if (lastInvoice) {
-    const lastNumber = parseInt(lastInvoice.invoiceNumber, 10);
-    nextNumber = lastNumber + 1;
-  }
-
-  return nextNumber.toString();
+  return counter.value.toString();
 };

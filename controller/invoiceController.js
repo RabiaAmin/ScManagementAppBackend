@@ -4,32 +4,58 @@ import ErrorHandler from "../middleware/Error.js";
 import { generateInvoiceNumber } from "../utils/GenerateInvoiceNumber.js";
 
 
-export const createInvoice = catchAsyncErrors(async (req, res, next)=>{
-    const {  date, fromBusiness, toClient,items, subTotal, tax, totalAmount, status ,poNumber } = req.body;
-   
-    const invoiceNumber = await generateInvoiceNumber();
-    if (  !fromBusiness || !toClient || !items || !subTotal || !totalAmount) {
-        return next(new ErrorHandler("Please provide all required fields", 400));
+export const createInvoice = async (req, res, next) => {
+  try {
+    const {
+      invNo, // manual invoice number (optional)
+      date,
+      fromBusiness,
+      toClient,
+      items,
+      subTotal,
+      tax,
+      totalAmount,
+      status,
+      poNumber
+    } = req.body;
+
+    if (!fromBusiness || !toClient || !items || !subTotal || !totalAmount) {
+      return next(new ErrorHandler("Please provide all required fields", 400));
+    }
+
+    let invoiceNumber;
+
+    if (invNo) {
+      // Manual invoice number (old invoices being imported)
+      invoiceNumber = invNo;
+    } else {
+      // Auto-generate invoice number from counter
+      invoiceNumber = await generateInvoiceNumber();
     }
 
     const invoice = await Invoice.create({
-        invoiceNumber,
-        poNumber,
-        date,
-        fromBusiness,
-        toClient,
-        items,
-        subTotal,
-        tax,
-        totalAmount,
-        status
+      invoiceNumber,
+      poNumber,
+      date,
+      fromBusiness,
+      toClient,
+      items,
+      subTotal,
+      tax,
+      totalAmount,
+      status
     });
 
     res.status(201).json({
-        success: true,
-        invoice
+      success: true,
+      invoice
     });
-} );
+
+  } catch (error) {
+    next(error);
+  }
+};
+
 
 export const updateInvoice = catchAsyncErrors(async (req, res, next)=>{
     const { id } = req.params;
@@ -127,6 +153,7 @@ export const getWeeklyStatements = catchAsyncErrors(async (req, res, next) => {
     {
       $match: {
         date: { $gte: new Date(startDate), $lte: new Date(endDate) },
+        status: "Sent",
       },
     },
     {
