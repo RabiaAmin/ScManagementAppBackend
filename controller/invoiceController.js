@@ -182,6 +182,49 @@ export const getWeeklyStatements = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
+export const getOrdersPerProduct = catchAsyncErrors(async (req, res, next) => {
+    const { startDate, endDate } = req.query;
+
+    let match = {};
+
+    if (startDate && endDate) {
+        match.date = {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate)
+        };
+    }
+
+    const result = await Invoice.aggregate([
+        { $match: match },
+        { $unwind: "$items" },
+        {
+            $group: {
+                _id: "$items.description",
+                totalOrders: { $sum: "$items.quantity" },
+                invoiceCount: { $addToSet: "$_id" } // collect unique invoice IDs
+            }
+        },
+        {
+            $project: {
+                _id: 0,
+                product: "$_id",
+                totalOrders: 1,
+                invoiceCount: { $size: "$invoiceCount" } // number of invoices containing this product
+            }
+        },
+        { $sort: { totalOrders: -1 } }
+    ]);
+
+    if (!result.length) {
+        return next(new ErrorHandler("No data found for given range", 404));
+    }
+
+    res.status(200).json({
+        success: true,
+        data: result
+    });
+});
+
 
 
 
