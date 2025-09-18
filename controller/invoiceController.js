@@ -185,7 +185,7 @@ export const getWeeklyStatements = catchAsyncErrors(async (req, res, next) => {
 export const getOrdersPerProduct = catchAsyncErrors(async (req, res, next) => {
     const { startDate, endDate } = req.query;
 
-    let match = {};
+    let match = { status: "Pending" }; 
 
     if (startDate && endDate) {
         match.date = {

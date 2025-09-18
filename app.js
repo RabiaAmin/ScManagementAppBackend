@@ -12,7 +12,9 @@ import invoiceRoute from './routes/invoiceRoute.js';
 
 // express() creates a function that is both for  handles requests and a container for middleware and routes. 
 const app = express();
-dotenv.config({path: './config/.env'});
+
+const nodeEnv = process.env.NODE_ENV || "development";
+dotenv.config({ path: `./config/.env.${nodeEnv}` });
 
 app.use(cors({
     origin: [process.env.FRONTEND_URL],
