@@ -132,7 +132,7 @@ export const getAllInvoice = catchAsyncErrors(async (req, res, next)=>{
     const invoices = await Invoice.find()
       .skip((page - 1) * limit)
       .limit(limit)
-      .sort({ createdAt: -1 }); // optional: latest first
+      .sort({ date: -1 }); // optional: latest first
 
     if (!invoices || invoices.length === 0) {
       return next(new ErrorHandler("No invoices found", 404));
