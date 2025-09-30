@@ -121,23 +121,29 @@ export const getInvoice = catchAsyncErrors(async (req, res, next)=>{
 
 
 export const getAllInvoice = catchAsyncErrors(async (req, res, next)=>{
-   const { startDate, endDate } = req.query;
+     let { page = 1, limit = 10 } = req.query;
+  page = parseInt(page);
+    limit = parseInt(limit);
 
-    let filter = {};
+    // Count total documents
+    const totalRecords = await Invoice.countDocuments();
 
-    if (startDate && endDate) {
-        filter.date = {
-            $gte: new Date(startDate),
-            $lte: new Date(endDate)
-        };
+    // Fetch paginated data
+    const invoices = await Invoice.find()
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort({ createdAt: -1 }); // optional: latest first
+
+    if (!invoices || invoices.length === 0) {
+      return next(new ErrorHandler("No invoices found", 404));
     }
-    const invoices = await Invoice.find(filter);
-    if (!invoices) {
-        return next(new ErrorHandler("No invoices found", 404));
-    }
+
     res.status(200).json({
-        success: true,
-        invoices
+      success: true,
+      invoices,
+      page,
+      totalPages: Math.ceil(totalRecords / limit),
+      totalRecords
     });
 } );
 
