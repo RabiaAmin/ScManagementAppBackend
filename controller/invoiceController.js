@@ -2,6 +2,7 @@ import { catchAsyncErrors } from "../middleware/CatchAsynErrors.js";
 import {Invoice} from "../model/invoice.model.js";
 import ErrorHandler from "../middleware/Error.js";
 import { generateInvoiceNumber } from "../utils/GenerateInvoiceNumber.js";
+import { getPaginatedInvoices, getMonthlyStats } from "../utils/GetMonthlyStates.js";
 
 
 export const createInvoice = async (req, res, next) => {
@@ -123,28 +124,23 @@ export const getInvoice = catchAsyncErrors(async (req, res, next)=>{
 export const getAllInvoice = catchAsyncErrors(async (req, res, next)=>{
      let { page = 1, limit = 10 } = req.query;
   page = parseInt(page);
-    limit = parseInt(limit);
+  limit = parseInt(limit);
 
-    // Count total documents
-    const totalRecords = await Invoice.countDocuments();
+  const { invoices, totalRecords, totalPages } = await getPaginatedInvoices(page, limit);
+  if (!invoices || invoices.length === 0) {
+    return next(new ErrorHandler("No invoices found", 404));
+  }
 
-    // Fetch paginated data
-    const invoices = await Invoice.find()
-      .skip((page - 1) * limit)
-      .limit(limit)
-      .sort({ date: -1 }); // optional: latest first
+  const stats = await getMonthlyStats();
 
-    if (!invoices || invoices.length === 0) {
-      return next(new ErrorHandler("No invoices found", 404));
-    }
-
-    res.status(200).json({
-      success: true,
-      invoices,
-      page,
-      totalPages: Math.ceil(totalRecords / limit),
-      totalRecords
-    });
+  res.status(200).json({
+    success: true,
+    invoices,
+    page,
+    totalPages,
+    totalRecords,
+    stats,
+  });
 } );
 
 
