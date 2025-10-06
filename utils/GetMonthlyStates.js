@@ -3,7 +3,7 @@ import { Invoice } from "../model/invoice.model.js";
 export const getPaginatedInvoices = async (page, limit) => {
   const totalRecords = await Invoice.countDocuments();
   const invoices = await Invoice.find()
-    .sort({ createdAt: -1 })
+    .sort({ _id: -1 })
     .skip((page - 1) * limit)
     .limit(limit);
 
