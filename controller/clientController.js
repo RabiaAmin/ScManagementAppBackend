@@ -3,21 +3,10 @@ import ErrorHandler from "../middleware/Error.js";
 import { ClientCollection } from "../model/client_collection.model.js";
 
 
-// addClient
-
-// updateClient, deleteClient,getClient,getAllClient
-
-//   name: { type: String, required: true },
-//   vatNumber: { type: String },
-//   registrationNumber: { type: String },
-//   address: { type: String },
-//   phone: { type: String },
-//   fax: { type: String },
-//   email: { type: String },
 
 
 export const addClient = catchAsyncErrors(async (req, res, next) => {
-  const { name, email, phone ,address, telphone ,registrationNumber,vatNumber,fax, } = req.body;
+  const { name, email, phone ,address, telphone ,registrationNumber,vatNumber,fax,vatApplicable,vatRate } = req.body;
 
 
 
@@ -29,6 +18,8 @@ export const addClient = catchAsyncErrors(async (req, res, next) => {
     registrationNumber,
     vatNumber,
     fax,
+    vatApplicable,
+    vatRate,
     address
 
   });
@@ -55,7 +46,9 @@ export const updateClient = catchAsyncErrors(async (req,res,next)=>{
     registrationNumber:req.body.registrationNumber,
     vatNumber:req.body.vatNumber,
     fax:req.body.fax,
-    address:req.body.address
+    address:req.body.address,
+    vatApplicable:req.body.vatApplicable,
+    vatRate:req.body.vatRate,
    };
 
     const client = await ClientCollection.findByIdAndUpdate(id,updatedClient,{
