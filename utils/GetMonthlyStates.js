@@ -28,7 +28,7 @@ export const getMonthlyStats = async () => {
 
   const currentMonthInvoices = await Invoice.find({
     date: { $gte: startDate, $lt: endDate }, // note: $lt to exclude the end date
-  });
+  }).populate("toClient");
 
     // Calculate total revenue (rounded to 2 decimals)
     const totalRevenue = Number(
@@ -58,6 +58,20 @@ export const getMonthlyStats = async () => {
 
     const totalInvoicesOfThisMonth = currentMonthInvoices.length;
 
+      const collectedVAT = Number(
+    currentMonthInvoices
+      .filter((inv) => inv.toClient?.vatApplicable && inv.status === "Paid")
+      .reduce((sum, inv) => sum + (inv.tax || 0), 0)
+      .toFixed(2)
+  );
+
+  const netRevenue = Number(
+    currentMonthInvoices
+      .filter((inv) => inv.status === "Paid")
+      .reduce((sum, inv) => sum + (inv.totalAmount - (inv.tax || 0)), 0)
+      .toFixed(2)
+  );
+
   return {
       startDate,
       endDate,
@@ -65,6 +79,8 @@ export const getMonthlyStats = async () => {
       outstandingRevenue,
       upcomingDueDates,
       totalInvoicesOfThisMonth,
-      PaidAmount
+      PaidAmount,
+      collectedVAT,
+      netRevenue
   };
 };
