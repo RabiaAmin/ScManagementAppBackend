@@ -13,8 +13,9 @@ const expenseSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    invoiceNumber: {
+    invoiceNo: {
       type: String,
+      unique: true,
       trim: true,
       default: "",
     },
@@ -45,17 +46,9 @@ const expenseSchema = new mongoose.Schema(
     },
 
     category: {
-      type: String,
-      enum: [
-        "Office Supplies",
-        "Maintenance",
-        "Utilities",
-        "Travel",
-        "Marketing",
-        "Equipment",
-        "Miscellaneous",
-      ],
-      default: "Miscellaneous",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ExpenseCategory",
+      required: true,
     },
 
     paymentMethod: {
@@ -63,27 +56,6 @@ const expenseSchema = new mongoose.Schema(
       enum: ["Cash", "Bank Transfer", "Card", "Cheque", "Other"],
       default: "Cash",
     },
-    paidTo: {
-      type: String,
-      trim: true,
-      default: "",
-      comment: "Person or company to whom payment was made",
-    },
-
-    
-    receiptUrl: {
-      type: String,
-      default: "",
-      comment: "Optional URL if image or document is uploaded",
-    },
-
-    
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
     notes: {
       type: String,
       trim: true,

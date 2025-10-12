@@ -13,7 +13,7 @@ export const addExpenseCategory = catchAsyncErrors(async (req, res, next) => {
     }
 
 
-    const expenseCategory = await ExpenseCategoryCollection.create({
+    const expenseCategory = await ExpenseCategory.create({
     name,
     description
   });
@@ -29,7 +29,7 @@ export const deleteExpenseCategory = catchAsyncErrors(async (req, res, next) => 
     if(!id){
         return next(new ErrorHandler("Please provide expense category id",400));
     }
-    const expenseCategory = await ExpenseCategoryCollection.findByIdAndDelete(id);
+    const expenseCategory = await ExpenseCategory.findByIdAndDelete(id);
 
     if(!expenseCategory){
         return next(new ErrorHandler("Expense category not found",404));
@@ -42,7 +42,7 @@ export const deleteExpenseCategory = catchAsyncErrors(async (req, res, next) => 
 );
 
 export const getAllExpenseCategories = catchAsyncErrors(async (req, res, next) => {
-    const expenseCategories = await ExpenseCategoryCollection.find();
+    const expenseCategories = await ExpenseCategory.find();
     res.status(200).json({
         success:true,
         expenseCategories,

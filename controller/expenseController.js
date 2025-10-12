@@ -4,23 +4,24 @@ import { catchAsyncErrors } from "../middleware/CatchAsynErrors.js";
 import ErrorHandler from "../middleware/Error.js";
 
 export const addExpense = catchAsyncErrors(async (req, res, next) => {
-    const { companyName, invoiceNo, amount, vatAmount, totalAmount, category, description, date, isVatApplicable } = req.body;
+    const { vendorName, invoiceNo, amount, vatAmount, totalAmount, category, date, isVatApplicable ,paymentMethod ,notes} = req.body;
 
-  if (!companyName || !invoiceNo || !amount || !totalAmount || !date) {
+  if (!vendorName || !invoiceNo || !amount || !totalAmount || !date) {
     return next(new ErrorHandler("Please enter all required fields", 400));
   }
 
   const expense = await Expense.create({
-    companyName,
+    vendorName,
     invoiceNo,
     amount,
     vatAmount,
     totalAmount,
+    paymentMethod,
     category,
-    description,
     date,
     isVatApplicable,
-    user: req.user._id,
+    notes
+   
   });
     res.status(201).json({
         success: true,  
@@ -33,20 +34,21 @@ export const updateExpense = catchAsyncErrors(async (req, res, next) => {
   const expense = await Expense.findById(id);
 
   if (!expense) return next(new ErrorHandler("Expense not found", 404));
-  if (expense.user.toString() !== req.user._id.toString())
-    return next(new ErrorHandler("You are not authorized to update this expense", 401));
 
-  const { companyName, invoiceNo, amount, vatAmount, totalAmount, category, description, date, isVatApplicable } = req.body;
 
-  expense.companyName = companyName || expense.companyName;
+  const {  vendorName, invoiceNo, amount, vatAmount, totalAmount, category,  date, isVatApplicable ,paymentMethod ,notes } = req.body;
+
+  expense.vendorName = vendorName || expense.vendorName;
   expense.invoiceNo = invoiceNo || expense.invoiceNo;
   expense.amount = amount || expense.amount;
   expense.vatAmount = vatAmount ?? expense.vatAmount;
   expense.totalAmount = totalAmount || expense.totalAmount;
   expense.category = category || expense.category;
-  expense.description = description || expense.description;
+  expense.notes = notes || expense.notes;
   expense.date = date || expense.date;
+  expense.paymentMethod = paymentMethod || expense.paymentMethod;
   expense.isVatApplicable = isVatApplicable ?? expense.isVatApplicable;
+
 
   await expense.save();
     res.status(200).json({
@@ -94,8 +96,8 @@ export const getAllExpenseByMonth = catchAsyncErrors(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
-    count: expenses.length,
     expenses,
   });
 });
+
 
