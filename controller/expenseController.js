@@ -63,9 +63,7 @@ export const deleteExpense = catchAsyncErrors(async (req, res, next) => {
     if (!expense) {
         return next(new ErrorHandler("Expense not found", 404));
     }
-    if (expense.user.toString() !== req.user._id.toString()) {
-        return next(new ErrorHandler("You are not authorized to delete this expense", 401));
-    }   
+   
     await expense.deleteOne();
     res.status(200).json({
         success: true,
@@ -86,17 +84,20 @@ export const getAllExpenseByMonth = catchAsyncErrors(async (req, res, next) => {
   const start = new Date(startDate);
   const end = new Date(endDate);
 
-  // Add one day to end date to include the last day fully
-  end.setHours(23, 59, 59, 999);
 
-  const expenses = await Expense.find({
-    user: id,
-    date: { $gte: start, $lte: end },
-  }).sort({ date: -1 });
+
+  const Expenses = await Expense.aggregate([
+     {
+      $match: {
+        createdAt: { $gte: new Date(start), $lte: new Date(end) }
+      },
+    },
+    { $sort: { _id: 1 } },
+  ])
 
   res.status(200).json({
     success: true,
-    expenses,
+    Expenses,
   });
 });
 

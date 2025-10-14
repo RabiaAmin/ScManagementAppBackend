@@ -7,7 +7,7 @@ const router = express.Router();
 router.post("/add",isAuthenticated,addExpense);
 router.put("/update/:id",isAuthenticated,updateExpense);
 router.delete("/delete/:id",isAuthenticated,deleteExpense);
-router.get("/get/:id",isAuthenticated,getAllExpenseByMonth);
+router.get("/getAll",isAuthenticated,getAllExpenseByMonth);
 
 
 
