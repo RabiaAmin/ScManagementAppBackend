@@ -101,4 +101,16 @@ export const getAllExpenseByMonth = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
+export const getSingleExpense = catchAsyncErrors(async (req,res,next)=>{
+const {id} = req.params;
+const expense = await Expense.findById(id);
+if(!expense){
+  return next(new ErrorHandler("Expense not found",404));
+}
+res.status(200).json({
+  success:true,
+  expense,
+});
+} );
+
 
