@@ -120,18 +120,34 @@ export const getInvoice = catchAsyncErrors(async (req, res, next)=>{
     });
 } );
 
-
-export const getAllInvoice = catchAsyncErrors(async (req, res, next)=>{
-     let { page = 1, limit = 10 } = req.query;
+export const getAllInvoice = catchAsyncErrors(async (req, res, next) => {
+  let { startDate, endDate, page = 1, limit = 40 } = req.query;
   page = parseInt(page);
   limit = parseInt(limit);
 
+  if (!startDate || !endDate) {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    const formatLocalDate = (d) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    startDate = formatLocalDate(start);
+    endDate = formatLocalDate(end);
+  }
+
   const { invoices, totalRecords, totalPages } = await getPaginatedInvoices(page, limit);
+
   if (!invoices || invoices.length === 0) {
     return next(new ErrorHandler("No invoices found", 404));
   }
 
-  const stats = await getMonthlyStats();
+  const stats = await getMonthlyStats(startDate, endDate);
 
   res.status(200).json({
     success: true,
@@ -141,8 +157,7 @@ export const getAllInvoice = catchAsyncErrors(async (req, res, next)=>{
     totalRecords,
     stats,
   });
-} );
-
+});
 
 export const getWeeklyStatements = catchAsyncErrors(async (req, res, next) => {
   const { startDate, endDate } = req.query;

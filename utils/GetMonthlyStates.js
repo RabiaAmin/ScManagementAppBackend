@@ -15,16 +15,7 @@ export const getPaginatedInvoices = async (page, limit) => {
   };
 };
 
-export const getMonthlyStats = async () => {
-  const now = new Date();
-
-  // Start date → 1st of last month
-  const startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
-
-  // End date → 1st of current month
-  const endDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-
-
+export const getMonthlyStats = async (startDate , endDate) => {
 
   const currentMonthInvoices = await Invoice.find({
     date: { $gte: startDate, $lt: endDate }, // note: $lt to exclude the end date
