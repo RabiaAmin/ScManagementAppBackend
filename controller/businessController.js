@@ -3,16 +3,7 @@ import ErrorHandler from "../middleware/Error.js";
 import { BusinessInfo } from "../model/business.model.js";
 
 
-// creatBusiness
-// updateBusiness
-// getBusiness
-//   name: { type: String, required: true },   // Sanya Clothing
-//   vatNumber: { type: String },
-//   registrationNumber: { type: String },
-//   address: { type: String },
-//   phone: { type: String },
-//   fax: { type: String },
-//   email: { type: String },
+
 
 
 export const creatBusiness = catchAsyncErrors(async (req, res, next) => {
