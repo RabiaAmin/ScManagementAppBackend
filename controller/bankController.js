@@ -46,6 +46,7 @@ export const updateBankAccount = catchAsyncErrors(async(req,res,next)=>{
         bankAccount,
     });
 });
+
 export const getBankAccount = catchAsyncErrors(async(req,res,next)=>{
     const { id } = req.params;
     const bankAccount = await BankAccount.findById(id);
@@ -64,7 +65,7 @@ export const deleteBankAccount = catchAsyncErrors(async(req,res,next)=>{
     if(!bankAccount){
         return next(new ErrorHandler("Bank account not found",404));
     }               
-    await bankAccount.remove();
+    await bankAccount.deleteOne();
     res.status(200).json({
         success:true,
         message:"Bank account deleted successfully",

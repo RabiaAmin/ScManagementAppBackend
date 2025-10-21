@@ -4,9 +4,9 @@ import { createBankAccount, deleteBankAccount, getAllBankAccounts, getBankAccoun
 const router = express.Router();
 
 router.post("/create",isAuthenticated,createBankAccount);
-router.put("/update:id",isAuthenticated,updateBankAccount);
-router.get("/get:id",isAuthenticated,getBankAccount);
-router.delete("/delete:id",isAuthenticated,deleteBankAccount);
+router.put("/update/:id",isAuthenticated,updateBankAccount);
+router.get("/get/:id",isAuthenticated,getBankAccount);
+router.delete("/delete/:id",isAuthenticated,deleteBankAccount);
 router.get("/getAll",isAuthenticated,getAllBankAccounts);
 
 export default router;
