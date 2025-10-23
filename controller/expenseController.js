@@ -2,6 +2,7 @@
 import {Expense} from "../model/expense.model.js";
 import { catchAsyncErrors } from "../middleware/CatchAsynErrors.js";
 import ErrorHandler from "../middleware/Error.js";
+import { getMonthlyStatsOfExpense } from "../utils/GetMonthlyStates.js";
 
 export const addExpense = catchAsyncErrors(async (req, res, next) => {
     const { vendorName, invoiceNo, amount, vatAmount, totalAmount, category, date, isVatApplicable ,paymentMethod ,notes} = req.body;
@@ -72,8 +73,8 @@ export const deleteExpense = catchAsyncErrors(async (req, res, next) => {
 }); 
 
 export const getAllExpenseByMonth = catchAsyncErrors(async (req, res, next) => {
-  const { id } = req.params; // user ID
-  const { startDate, endDate } = req.query; // frontend will send ?startDate=2025-09-01&endDate=2025-09-30
+  const { id } = req.params; 
+  const { startDate, endDate } = req.query; 
 
   // Validate date inputs
   if (!startDate || !endDate) {
@@ -87,17 +88,20 @@ export const getAllExpenseByMonth = catchAsyncErrors(async (req, res, next) => {
 
 
   const Expenses = await Expense.aggregate([
-     {
-      $match: {
-        createdAt: { $gte: new Date(start), $lte: new Date(end) }
-      },
+  {
+    $match: {
+      date: { $gte: new Date(start), $lte: new Date(end) }
     },
-    { $sort: { _id: 1 } },
-  ])
+  },
+  { $sort: { date: 1 } },
+]);
+
+   const expenseStats = await getMonthlyStatsOfExpense(start, end);
 
   res.status(200).json({
     success: true,
     Expenses,
+    expenseStats
   });
 });
 

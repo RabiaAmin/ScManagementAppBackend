@@ -1,3 +1,4 @@
+import { Expense } from "../model/expense.model.js";
 import { Invoice } from "../model/invoice.model.js";
 
 export const getPaginatedInvoices = async (page, limit) => {
@@ -75,3 +76,36 @@ export const getMonthlyStats = async (startDate , endDate) => {
       netRevenue
   };
 };
+
+export const getMonthlyStatsOfExpense = async (startDate , endDate) => {
+
+  const currentMonthExpenses = await Expense.find({
+    date: { $gte: startDate, $lt: endDate }, 
+  }); 
+  
+    const totalExpense = Number(
+      currentMonthExpenses.reduce((sum, exp) => sum + exp.totalAmount, 0).toFixed(2)
+    );  
+
+
+const nonVatExpenses = currentMonthExpenses.filter(exp => !exp.isVatApplicable);
+const vatExpenses = currentMonthExpenses.filter(exp => exp.isVatApplicable);
+
+const totalNonVatExpense = Number(
+  nonVatExpenses.reduce((sum, exp) => sum + exp.totalAmount, 0).toFixed(2)
+);
+
+const totalVatExpense = Number(
+  vatExpenses.reduce((sum, exp) => sum + exp.totalAmount, 0).toFixed(2)
+);
+const expenseCount = currentMonthExpenses.length;
+  return {
+      startDate,
+      endDate,
+      totalExpense ,
+      
+      totalNonVatExpense,
+      totalVatExpense,
+      expenseCount
+  };
+} 

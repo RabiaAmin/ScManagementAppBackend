@@ -52,6 +52,7 @@ export const createInvoice = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
+      message: "Invoice created successfully",
       invoice,
     });
   } catch (error) {
@@ -86,6 +87,7 @@ export const updateInvoice = catchAsyncErrors(async (req, res, next) => {
 
   res.status(200).json({
     success: true,
+    message: "Invoice updated successfully",
     invoice,
   });
 });
