@@ -1,9 +1,9 @@
 import { Expense } from "../model/expense.model.js";
 import { Invoice } from "../model/invoice.model.js";
 
-export const getPaginatedInvoices = async (page, limit) => {
-  const totalRecords = await Invoice.countDocuments();
-  const invoices = await Invoice.find()
+export const getPaginatedInvoices = async (page, limit, filter={}) => {
+  const totalRecords = await Invoice.countDocuments(filter);
+  const invoices = await Invoice.find(filter)
     .sort({ _id: -1 })
     .skip((page - 1) * limit)
     .limit(limit);

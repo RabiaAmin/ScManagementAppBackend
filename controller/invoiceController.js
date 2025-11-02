@@ -127,7 +127,9 @@ export const getInvoice = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const getAllInvoice = catchAsyncErrors(async (req, res, next) => {
-  let { startDate, endDate, page = 1, limit = 40 } = req.query;
+
+
+  let { startDate, endDate, page = 1, limit = 40,poNumber , toClient } = req.query;
   page = parseInt(page);
   limit = parseInt(limit);
 
@@ -147,9 +149,17 @@ export const getAllInvoice = catchAsyncErrors(async (req, res, next) => {
     endDate = formatLocalDate(end);
   }
 
+    const filter = {};
+  if (poNumber) {
+    filter.poNumber = poNumber;
+  }
+  if (toClient) {
+    filter.toClient = toClient;
+  }
   const { invoices, totalRecords, totalPages } = await getPaginatedInvoices(
     page,
-    limit
+    limit,
+    filter,
   );
 
   if (!invoices || invoices.length === 0) {
