@@ -260,3 +260,21 @@ export const getOrdersPerProduct = catchAsyncErrors(async (req, res, next) => {
     data: result,
   });
 });
+
+export const markAsPaid = catchAsyncErrors(async (req, res, next) => {
+  const { invoiceIds } = req.body;
+
+  if (!invoiceIds || invoiceIds.length === 0) {
+    return next(new ErrorHandler("No invoices provided", 400));
+  }
+
+  const result = await Invoice.updateMany(
+    { _id: { $in: invoiceIds } },
+    { $set: { status: "Paid" } }
+  );
+
+  res.status(200).json({
+    success: true,
+    message: `${result.modifiedCount} invoices marked as Paid`,
+  });
+});
