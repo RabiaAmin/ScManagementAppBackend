@@ -166,7 +166,10 @@ export const getAllInvoice = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("No invoices found", 404));
   }
 
-  const stats = await getMonthlyStats(startDate, endDate);
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  const stats = await getMonthlyStats(start, end);
 
   res.status(200).json({
     success: true,
