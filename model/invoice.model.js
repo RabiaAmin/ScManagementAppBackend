@@ -5,6 +5,11 @@ const invoiceSchema = new mongoose.Schema({
   date: { type: Date, default: Date.now },
   fromBusiness: { type: mongoose.Schema.Types.ObjectId, ref: "Business" },
   toClient: { type: mongoose.Schema.Types.ObjectId, ref: "Client" },
+  category: {
+    type: String,
+    enum: ["Finished Garments", "CMT Services", "Other Income"],
+    required: true,
+  },
   items: [
     {
       quantity: Number,

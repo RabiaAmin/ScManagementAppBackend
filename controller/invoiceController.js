@@ -7,6 +7,7 @@ import {
   getMonthlyStats,
 } from "../utils/GetMonthlyStates.js";
 import { BankAccount } from "../model/bank_account.model.js";
+import { BookTransaction } from "../model/book_Keeping.model.js";
 
 export const createInvoice = async (req, res, next) => {
   try {
@@ -21,9 +22,10 @@ export const createInvoice = async (req, res, next) => {
       totalAmount,
       status,
       poNumber,
+      category,
     } = req.body;
 
-    if (!fromBusiness || !toClient || !items || !subTotal || !totalAmount) {
+    if (!fromBusiness || !toClient || !items || !subTotal || !totalAmount || !category) {
       return next(new ErrorHandler("Please provide all required fields", 400));
     }
 
@@ -45,10 +47,33 @@ export const createInvoice = async (req, res, next) => {
       toClient,
       items,
       subTotal,
+      category,
       tax,
       totalAmount,
       status,
     });
+
+    if (status === "Paid") {
+      try {
+        await BookTransaction.create({
+          transactionType: "INCOME",
+          sourceType: "INVOICE",
+          relatedInvoice: invoice._id,
+          clientId: invoice.toClient,
+          amount: invoice.subTotal,
+          tax: invoice.tax,
+          total: invoice.totalAmount,
+          isVatApplicable: invoice.isVatApplicable,
+          incomeCategory: invoice.category,
+          paymentMethod: "Cash",
+          description: `Payment received for invoice #${invoice.invoiceNumber}`,
+          date: invoice.date,
+          user: req.user._id,
+        });
+      } catch (error) {
+        console.error("BookTransaction creation failed:", err.message);
+      }
+    }
 
     res.status(201).json({
       success: true,
@@ -62,27 +87,70 @@ export const createInvoice = async (req, res, next) => {
 
 export const updateInvoice = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
+  const invoice = await Invoice.findById(id);
 
-  const updatedInvoice = {
+  if (!invoice) return next(new ErrorHandler("Invoice not found", 404));
+
+  const oldStatus = invoice.status;
+
+  // Update invoice
+  Object.assign(invoice, {
     invoiceNumber: req.body.invoiceNumber,
     poNumber: req.body.poNumber,
     date: req.body.date,
     fromBusiness: req.body.fromBusiness,
+    category:req.body.category,
     toClient: req.body.toClient,
     items: req.body.items,
     subTotal: req.body.subTotal,
     tax: req.body.tax,
     totalAmount: req.body.totalAmount,
     status: req.body.status,
-  };
-
-  const invoice = await Invoice.findByIdAndUpdate(id, updatedInvoice, {
-    new: true,
-    runValidators: true,
   });
 
-  if (!invoice) {
-    return next(new ErrorHandler("Invoice not found", 404));
+  await invoice.save();
+
+  // Sync or Create BookTransaction
+  const existingTransaction = await BookTransaction.findOne({
+    relatedInvoice: invoice._id,
+  });
+
+  // Case 1: Invoice just got paid (previously not paid)
+  if (oldStatus !== "Paid" && invoice.status === "Paid") {
+    try {
+      await BookTransaction.create({
+        transactionType: "INCOME",
+        sourceType: "INVOICE",
+        relatedInvoice: invoice._id,
+        clientId: invoice.toClient,
+        amount: invoice.subTotal,
+        tax: invoice.tax,
+        total: invoice.totalAmount,
+        isVatApplicable: invoice.isVatApplicable,
+        incomeCategory: invoice.category,
+        paymentMethod: "Cash",
+        description: `Payment received for invoice #${invoice.invoiceNumber}`,
+        date: invoice.date,
+        user: req.user._id,
+      });
+    } catch (error) {
+      console.error("BookTransaction creation failed:", err.message);
+    }
+  } else if (oldStatus === "Paid" && invoice.status !== "Paid") {
+    if (existingTransaction) {
+      await BookTransaction.deleteOne({ relatedInvoice: invoice._id });
+    }
+  } else if (existingTransaction) {
+    await BookTransaction.findOneAndUpdate(
+      { relatedInvoice: invoice._id },
+      {
+        amount: invoice.subTotal,
+        tax: invoice.tax,
+        total: invoice.totalAmount,
+        date: invoice.date,
+      },
+      { new: true }
+    );
   }
 
   res.status(200).json({
@@ -100,6 +168,8 @@ export const deleteInvoice = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Invoice not found", 404));
   }
   await invoice.deleteOne();
+  await BookTransaction.deleteOne({ relatedInvoice: invoice._id });
+
   res.status(200).json({
     success: true,
     message: "Invoice deleted successfully",
@@ -109,7 +179,9 @@ export const deleteInvoice = catchAsyncErrors(async (req, res, next) => {
 export const getInvoice = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
 
-  const invoice = await Invoice.findById(id).populate("toClient").populate("fromBusiness");
+  const invoice = await Invoice.findById(id)
+    .populate("toClient")
+    .populate("fromBusiness");
   if (!invoice) {
     return next(new ErrorHandler("Invoice not found", 404));
   }
@@ -127,9 +199,14 @@ export const getInvoice = catchAsyncErrors(async (req, res, next) => {
 });
 
 export const getAllInvoice = catchAsyncErrors(async (req, res, next) => {
-
-
-  let { startDate, endDate, page = 1, limit = 40,poNumber , toClient } = req.query;
+  let {
+    startDate,
+    endDate,
+    page = 1,
+    limit = 40,
+    poNumber,
+    toClient,
+  } = req.query;
   page = parseInt(page);
   limit = parseInt(limit);
 
@@ -149,7 +226,7 @@ export const getAllInvoice = catchAsyncErrors(async (req, res, next) => {
     endDate = formatLocalDate(end);
   }
 
-    const filter = {};
+  const filter = {};
   if (poNumber) {
     filter.poNumber = poNumber;
   }
@@ -159,7 +236,7 @@ export const getAllInvoice = catchAsyncErrors(async (req, res, next) => {
   const { invoices, totalRecords, totalPages } = await getPaginatedInvoices(
     page,
     limit,
-    filter,
+    filter
   );
 
   if (!invoices || invoices.length === 0) {
@@ -271,13 +348,47 @@ export const markAsPaid = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("No invoices provided", 400));
   }
 
-  const result = await Invoice.updateMany(
-    { _id: { $in: invoiceIds } },
-    { $set: { status: "Paid" } }
-  );
+  const invoices = await Invoice.find({ _id: { $in: invoiceIds } });
+
+  let createdTransactions = 0;
+
+  for (const invoice of invoices) {
+    const oldStatus = invoice.status;
+
+    // Update invoice status
+    invoice.status = "Paid";
+    await invoice.save();
+
+    // Check if transaction already exists
+    const existingTransaction = await BookTransaction.findOne({
+      relatedInvoice: invoice._id,
+    });
+
+    // Create new BookTransaction ONLY if:
+    // - invoice was previously NOT paid
+    // - and no transaction exists
+    if (oldStatus !== "Paid" && !existingTransaction) {
+      await BookTransaction.create({
+        transactionType: "INCOME",
+        sourceType: "INVOICE",
+        relatedInvoice: invoice._id,
+        clientId: invoice.toClient,
+        amount: invoice.subTotal,
+        tax: invoice.tax,
+        total: invoice.totalAmount,
+        isVatApplicable: invoice.isVatApplicable,
+        paymentMethod: "Cash",
+        description: `Payment received for invoice #${invoice.invoiceNumber}`,
+        date: invoice.date,
+        user: req.user._id,
+      });
+
+      createdTransactions++;
+    }
+  }
 
   res.status(200).json({
     success: true,
-    message: `${result.modifiedCount} invoices marked as Paid`,
+    message: `${invoices.length} invoices marked as Paid, ${createdTransactions} transactions created`,
   });
 });

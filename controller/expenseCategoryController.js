@@ -6,16 +6,17 @@ import { ExpenseCategory } from "../model/expense_category.model.js";
 
 
 export const addExpenseCategory = catchAsyncErrors(async (req, res, next) => {
-  const { name, description } = req.body;
+  const { name, description ,type } = req.body;
 
-    if (!name || !description) {
+    if (!name || !description || !type) {
     return next(new ErrorHandler("Please provide all required fields", 400));
     }
 
 
     const expenseCategory = await ExpenseCategory.create({
     name,
-    description
+    description,
+    type
   });
     res.status(201).json({
     success: true,
