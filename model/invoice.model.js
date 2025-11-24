@@ -8,7 +8,7 @@ const invoiceSchema = new mongoose.Schema({
   category: {
     type: String,
     enum: ["Finished Garments", "CMT Services", "Other Income"],
-    required: true,
+   
   },
   items: [
     {
