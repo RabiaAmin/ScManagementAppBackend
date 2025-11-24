@@ -13,6 +13,8 @@ import expenseCategoryRoute from './routes/expenseCategoryRoute.js';
 import expenseRoute from './routes/expenseRoute.js';
 import bankAccountRoute from './routes/bankAccountRoute.js';
 import bookTransactionRoute from './routes/bookTransactionRoute.js';
+import attendanceRoutes from "./routes/attendanceRoute.js";
+
 
 // express() creates a function that is both for  handles requests and a container for middleware and routes. 
 const app = express();
@@ -50,6 +52,7 @@ app.use('/api/v1/expenseCategory', expenseCategoryRoute);
 app.use('/api/v1/expense', expenseRoute);
 app.use('/api/v1/bankAccount',bankAccountRoute);
 app.use('/api/v1/bankTransaction',bookTransactionRoute);
+app.use("/api/attendance", attendanceRoutes);
 
 
 

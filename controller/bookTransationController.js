@@ -1,4 +1,3 @@
-
 import ErrorHandler from "../middleware/Error.js";
 import { catchAsyncErrors } from "../middleware/CatchAsynErrors.js";
 import { BookTransaction } from "../model/book_Keeping.model.js";
@@ -10,6 +9,7 @@ export const addTransaction = catchAsyncErrors(async (req, res, next) => {
     clientName,
     category,
     incomeCategory,
+    supplierName,
     amount,
     tax,
     total,
@@ -18,7 +18,15 @@ export const addTransaction = catchAsyncErrors(async (req, res, next) => {
     date,
   } = req.body;
 
-  if (!transactionType || !sourceType || !amount || !total || !paymentMethod || !date || !clientName) {
+  if (
+    !transactionType ||
+    !sourceType ||
+    !amount ||
+    !total ||
+    !paymentMethod ||
+    !date 
+  
+  ) {
     return next(new ErrorHandler("Please fill all required fields", 400));
   }
 
@@ -28,6 +36,7 @@ export const addTransaction = catchAsyncErrors(async (req, res, next) => {
     clientName,
     category,
     incomeCategory,
+    supplierName,
     amount,
     tax,
     total,
@@ -44,7 +53,6 @@ export const addTransaction = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-
 export const updateTransaction = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
 
@@ -54,15 +62,21 @@ export const updateTransaction = catchAsyncErrors(async (req, res, next) => {
   }
 
   if (transaction.user.toString() !== req.user._id.toString()) {
-    return next(new ErrorHandler("You are not authorized to update this transaction", 401));
+    return next(
+      new ErrorHandler("You are not authorized to update this transaction", 401)
+    );
   }
 
   const updatedData = req.body;
 
-  const updatedTransaction = await BookTransaction.findByIdAndUpdate(id, updatedData, {
-    new: true,
-    runValidators: true,
-  });
+  const updatedTransaction = await BookTransaction.findByIdAndUpdate(
+    id,
+    updatedData,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 
   res.status(200).json({
     success: true,
@@ -70,7 +84,6 @@ export const updateTransaction = catchAsyncErrors(async (req, res, next) => {
     transaction: updatedTransaction,
   });
 });
-
 
 export const deleteTransaction = catchAsyncErrors(async (req, res, next) => {
   const { id } = req.params;
@@ -81,7 +94,9 @@ export const deleteTransaction = catchAsyncErrors(async (req, res, next) => {
   }
 
   if (transaction.user.toString() !== req.user._id.toString()) {
-    return next(new ErrorHandler("You are not authorized to delete this transaction", 401));
+    return next(
+      new ErrorHandler("You are not authorized to delete this transaction", 401)
+    );
   }
 
   await transaction.deleteOne();
@@ -92,46 +107,47 @@ export const deleteTransaction = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-export const getTransactionsByDate = catchAsyncErrors(async (req, res, next) => {
+export const getTransactionsByDate = catchAsyncErrors(
+  async (req, res, next) => {
+    const { _id } = req.user;
+    let { startDate, endDate } = req.query;
 
-  const { _id } = req.user;
-  let { startDate, endDate } = req.query;
+    if (!startDate || !endDate) {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0);
 
-  if (!startDate || !endDate) {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+      const formatLocalDate = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      };
 
-    const formatLocalDate = (d) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const day = String(d.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
+      startDate = formatLocalDate(start);
+      endDate = formatLocalDate(end);
+    }
 
-    startDate = formatLocalDate(start);
-    endDate = formatLocalDate(end);
+    const transactions = await BookTransaction.find({
+      user: _id,
+      date: { $gte: new Date(startDate), $lte: new Date(endDate) },
+    })
+      .populate("clientId category relatedInvoice relatedExpense")
+      .sort({ date: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: transactions.length,
+      transactions,
+    });
   }
-
-
-  const transactions = await BookTransaction.find({
-    user: _id,
-    date: { $gte: new Date(startDate), $lte: new Date(endDate) },
-  })
-    .populate("clientId category relatedInvoice relatedExpense")
-    .sort({ date: -1 });
-
-  res.status(200).json({
-    success: true,
-    count: transactions.length,
-    transactions,
-  });
-});
+);
 
 export const getSingleTransaction = catchAsyncErrors(async (req, res, next) => {
-  const { id } = req.params;  
-  const transaction = await BookTransaction.findById(id)
-    .populate("clientId category relatedInvoice relatedExpense");
+  const { id } = req.params;
+  const transaction = await BookTransaction.findById(id).populate(
+    "clientId category relatedInvoice relatedExpense"
+  );
   if (!transaction) {
     return next(new ErrorHandler("Transaction not found", 404));
   }
@@ -141,9 +157,7 @@ export const getSingleTransaction = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
-
 export const getProfitLossReport = catchAsyncErrors(async (req, res, next) => {
-  
   if (!req.user) {
     return next(new ErrorHandler("User not authenticated", 401));
   }
@@ -156,7 +170,7 @@ export const getProfitLossReport = catchAsyncErrors(async (req, res, next) => {
 
   const transactions = await BookTransaction.find({
     user: req.user._id,
-    date: { $gte: new Date(startDate), $lte: new Date(endDate) }
+    date: { $gte: new Date(startDate), $lte: new Date(endDate) },
   }).populate("category");
 
   // ============================
@@ -204,17 +218,19 @@ export const getProfitLossReport = catchAsyncErrors(async (req, res, next) => {
   // ============================
   //      PROCESS TRANSACTIONS
   // ============================
-  transactions.forEach(t => {
+  transactions.forEach((t) => {
     let cat = t?.category?.name || "";
- 
+
     let incomeCat = t?.incomeCategory || "";
 
     // --------------------
     //       INCOME
     // --------------------
     if (t.transactionType === "INCOME") {
-      if (incomeCat === "Finished Garments") report.revenue.finishedGarments += t.total;
-      else if (incomeCat === "CMT Services") report.revenue.cmtServices += t.total;
+      if (incomeCat === "Finished Garments")
+        report.revenue.finishedGarments += t.total;
+      else if (incomeCat === "CMT Services")
+        report.revenue.cmtServices += t.total;
       else report.revenue.otherIncome += t.total;
     }
 
@@ -222,24 +238,26 @@ export const getProfitLossReport = catchAsyncErrors(async (req, res, next) => {
     //       EXPENSES
     // --------------------
     else if (t.transactionType === "EXPENSE") {
-      
       // ------------ COGS -------------
       if (cat === "Trims & Materials") report.cogs.fabricTrims += t.total;
       else if (cat === "Labor") report.cogs.labor += t.total;
       else if (cat === "Factory Overheads") report.cogs.overheads += t.total;
       else if (cat === "Packaging & Shipping") report.cogs.packaging += t.total;
-
       // ------ OPERATING EXPENSES ------
-      else if (cat === "Administrative Expenses") report.operating.admin += t.total;
-      else if (cat === "Sales & Marketing") report.operating.salesMarketing += t.total;
-      else if (cat === "Rent & Utilities") report.operating.rentUtilities += t.total;
-      else if (cat === "Depreciation & Machinery Maintenance") report.operating.depreciation += t.total;
+      else if (cat === "Administrative Expenses")
+        report.operating.admin += t.total;
+      else if (cat === "Sales & Marketing")
+        report.operating.salesMarketing += t.total;
+      else if (cat === "Rent & Utilities")
+        report.operating.rentUtilities += t.total;
+      else if (cat === "Depreciation & Machinery Maintenance")
+        report.operating.depreciation += t.total;
       else if (cat === "Other Expenses") report.operating.other += t.total;
-
       // ------ NON OPERATING ----------
-      else if (cat === "Interest Expense") report.nonOperating.interestExpense += t.total;
-
-      else if (cat === "Other Non-Operational") report.nonOperating.other += t.total;
+      else if (cat === "Interest Expense")
+        report.nonOperating.interestExpense += t.total;
+      else if (cat === "Other Non-Operational")
+        report.nonOperating.other += t.total;
     }
   });
 
@@ -258,8 +276,7 @@ export const getProfitLossReport = catchAsyncErrors(async (req, res, next) => {
     report.cogs.overheads +
     report.cogs.packaging;
 
-  report.grossProfit =
-    report.revenue.total - report.cogs.total;
+  report.grossProfit = report.revenue.total - report.cogs.total;
 
   report.operating.total =
     report.operating.admin +
@@ -268,26 +285,21 @@ export const getProfitLossReport = catchAsyncErrors(async (req, res, next) => {
     report.operating.depreciation +
     report.operating.other;
 
-  report.operatingProfit =
-    report.grossProfit - report.operating.total;
+  report.operatingProfit = report.grossProfit - report.operating.total;
 
   report.nonOperating.total =
     report.nonOperating.interestIncome -
     report.nonOperating.interestExpense +
     report.nonOperating.other;
 
-  report.profitBeforeTax =
-    report.operatingProfit + report.nonOperating.total;
+  report.profitBeforeTax = report.operatingProfit + report.nonOperating.total;
 
   // Tax if you ever add category "Income Tax"
-  report.taxExpense =
-    transactions
-      .filter(t => t?.category?.name === "Income Tax Expense")
-      .reduce((sum, t) => sum + t.total, 0);
+  report.taxExpense = transactions
+    .filter((t) => t?.category?.name === "Income Tax Expense")
+    .reduce((sum, t) => sum + t.total, 0);
 
-  report.netProfit =
-    report.profitBeforeTax - report.taxExpense;
-
+  report.netProfit = report.profitBeforeTax - report.taxExpense;
 
   // ============================
   //       SEND RESPONSE
@@ -297,98 +309,89 @@ export const getProfitLossReport = catchAsyncErrors(async (req, res, next) => {
     period: { startDate, endDate },
     report,
   });
-
 });
-
-
 
 export const getVatSummaryReport = catchAsyncErrors(async (req, res, next) => {
-  const { _id } = req.user;
+  if (!req.user) {
+    return next(new ErrorHandler("User not authenticated", 401));
+  }
+
   let { startDate, endDate } = req.query;
 
-  if (!startDate || !endDate)
-    return next(new ErrorHandler("Start & End date required", 400));
+  if (!startDate || !endDate) {
+    return next(new ErrorHandler("Start and End date are required", 400));
+  }
 
+  // Fetch all VAT-applicable transactions in date range
   const transactions = await BookTransaction.find({
-    user: _id,
-    date: { $gte: new Date(startDate), $lte: new Date(endDate) }
-  });
+    user: req.user._id,
+    isVatApplicable: true,
+    date: { $gte: new Date(startDate), $lte: new Date(endDate) },
+  })
+    .populate("category")
+    .populate("relatedInvoice")
+    .populate("relatedExpense");
 
-  const vatCollected = transactions
-    .filter(t => t.transactionType === "INCOME")
-    .reduce((sum, t) => sum + (t.tax || 0), 0);
-
-  const vatPaid = transactions
-    .filter(t => t.transactionType === "EXPENSE")
-    .reduce((sum, t) => sum + (t.tax || 0), 0);
-
-  res.status(200).json({
-    success: true,
+  // ---------------------------
+  // INITIAL VAT STRUCTURE
+  // ---------------------------
+  let vatReport = {
     period: { startDate, endDate },
-    vatCollected,
-    vatPaid,
-    netVat: vatCollected - vatPaid,
-    transactions
+
+    outputVAT: 0, // VAT on INCOME
+    inputVAT: 0, // VAT on EXPENSE
+    netVAT: 0,
+
+    outputTransactions: [],
+    inputTransactions: [],
+  };
+
+  // ---------------------------
+  // PROCESS TRANSACTIONS
+  // ---------------------------
+  transactions.forEach((t) => {
+    const taxableAmount = Number(t.amount) || 0;
+    const vatAmount = Number(t.tax) || 0;
+
+    const entry = {
+      _id: t._id,
+      date: t.date,
+      reference: t.relatedInvoice?.invoiceNumber || t.relatedExpense?.invoiceNo || "Manual Entry",
+      customerOrSupplier: t.clientName || t.suplierName || "-",
+      taxableAmount,
+      vatRate: "15%",
+      vatAmount,
+      category: t?.category?.name || t?.incomeCategory || "",
+    };
+
+    // Output VAT (INCOME)
+    if (t.transactionType === "INCOME") {
+      vatReport.outputVAT += vatAmount;
+      vatReport.outputTransactions.push(entry);
+    }
+
+    // Input VAT (EXPENSE)
+    if (t.transactionType === "EXPENSE") {
+      vatReport.inputVAT += vatAmount;
+      vatReport.inputTransactions.push(entry);
+    }
   });
-});
 
+  // ---------------------------
+  // NET VAT CALCULATIONS
+  // ---------------------------
+  vatReport.outputVAT = Number(vatReport.outputVAT.toFixed(2));
+  vatReport.inputVAT = Number(vatReport.inputVAT.toFixed(2));
 
-export const getCashFlowReport = catchAsyncErrors(async (req, res, next) => {
-    const { _id } = req.user;
-  let { startDate, endDate } = req.query;
+  vatReport.netVAT = Number(
+    (vatReport.outputVAT - vatReport.inputVAT).toFixed(2)
+  );
 
-  if (!startDate || !endDate)
-    return next(new ErrorHandler("Start & End date required", 400));
-
-  const transactions = await BookTransaction.find({
-    user: _id,
-    date: { $gte: new Date(startDate), $lte: new Date(endDate) }
-  });
-
-  const cashIn = transactions
-    .filter(t => t.transactionType === "INCOME")
-    .reduce((sum, t) => sum + t.total, 0);
-
-  const cashOut = transactions
-    .filter(t => t.transactionType === "EXPENSE")
-    .reduce((sum, t) => sum + t.total, 0);
-
+  // ---------------------------
+  // SEND REPORT
+  // ---------------------------
   res.status(200).json({
     success: true,
-    cashIn,
-    cashOut,
-    netCashFlow: cashIn - cashOut,
-    transactions
-  });
-});
-
-export const getVatLedger = catchAsyncErrors(async (req, res, next) => {
-  const { _id } = req.user;
-  let { startDate, endDate } = req.query;
-
-  const ledger = await BookTransaction.find({
-    user: _id,
-    tax: { $gt: 0 },
-    date: { $gte: new Date(startDate), $lte: new Date(endDate) }
-  }).sort({ date: 1 });
-
-  res.status(200).json({
-    success: true,
-    ledger
-  });
-});
-
-export const getGeneralLedger = catchAsyncErrors(async (req, res, next) => {
-   const { _id } = req.user;
-  let { startDate, endDate } = req.query;
-
-  const ledger = await BookTransaction.find({
-    user: _id,
-    date: { $gte: new Date(startDate), $lte: new Date(endDate) }
-  }).sort({ date: 1 });
-
-  res.status(200).json({
-    success: true,
-    ledger
+    report: vatReport,
   });
 });

@@ -42,6 +42,7 @@ export const addExpense = catchAsyncErrors(async (req, res, next) => {
       sourceType: "EXPENSE",
       relatedExpense: expense._id,
       category: expense.category,
+      suplierName: expense.vendorName,
       amount: expense.amount,
       tax: expense.vatAmount || 0,
       total: expense.totalAmount,
@@ -71,6 +72,7 @@ export const updateExpense = catchAsyncErrors(async (req, res, next) => {
   const {
     vendorName,
     invoiceNo,
+    
     amount,
     vatAmount,
     totalAmount,

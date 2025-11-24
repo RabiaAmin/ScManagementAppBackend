@@ -28,6 +28,8 @@ const bookTransactionSchema = new mongoose.Schema({
   type: String,
   
   },
+  suplierName: {
+    type: String,},
 
 
   clientId: {
@@ -42,7 +44,7 @@ const bookTransactionSchema = new mongoose.Schema({
 
   incomeCategory: {
   type: String,
-  enum: ["Finished Garments", "CMT Services", "Other Income"],
+  enum: ["Finished Garments", "CMT Services", "Other Income",""],
   },
 
 
