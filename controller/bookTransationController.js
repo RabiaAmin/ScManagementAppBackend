@@ -16,6 +16,7 @@ export const addTransaction = catchAsyncErrors(async (req, res, next) => {
     paymentMethod,
     description,
     date,
+    isVatApplicable,
   } = req.body;
 
   if (
@@ -42,6 +43,7 @@ export const addTransaction = catchAsyncErrors(async (req, res, next) => {
     paymentMethod,
     description,
     date,
+    isVatApplicable,
     user: req.user._id,
   });
 

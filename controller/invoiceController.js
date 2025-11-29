@@ -53,7 +53,11 @@ export const createInvoice = async (req, res, next) => {
       status,
     });
 
+
+
     if (status === "Paid") {
+       const vatApplicable = parseFloat(tax) > 0 ? true : false;
+
       try {
         await BookTransaction.create({
           transactionType: "INCOME",
@@ -63,7 +67,7 @@ export const createInvoice = async (req, res, next) => {
           amount: invoice.subTotal,
           tax: invoice.tax,
           total: invoice.totalAmount,
-          isVatApplicable: invoice.isVatApplicable,
+          isVatApplicable: vatApplicable,
           incomeCategory: invoice.category,
           paymentMethod: "Cash",
           description: `Payment received for invoice #${invoice.invoiceNumber}`,
@@ -117,6 +121,8 @@ export const updateInvoice = catchAsyncErrors(async (req, res, next) => {
 
   // Case 1: Invoice just got paid (previously not paid)
   if (oldStatus !== "Paid" && invoice.status === "Paid") {
+     const vatApplicable = parseFloat(invoice.tax) > 0 ? true : false;
+
     try {
       await BookTransaction.create({
         transactionType: "INCOME",
@@ -126,7 +132,7 @@ export const updateInvoice = catchAsyncErrors(async (req, res, next) => {
         amount: invoice.subTotal,
         tax: invoice.tax,
         total: invoice.totalAmount,
-        isVatApplicable: invoice.isVatApplicable,
+        isVatApplicable: vatApplicable,
         incomeCategory: invoice.category,
         paymentMethod: "Cash",
         description: `Payment received for invoice #${invoice.invoiceNumber}`,
@@ -368,6 +374,8 @@ export const markAsPaid = catchAsyncErrors(async (req, res, next) => {
     // - invoice was previously NOT paid
     // - and no transaction exists
     if (oldStatus !== "Paid" && !existingTransaction) {
+        const vatApplicable = parseFloat(invoice.tax) > 0 ? true : false;
+
       await BookTransaction.create({
         transactionType: "INCOME",
         sourceType: "INVOICE",
@@ -376,7 +384,7 @@ export const markAsPaid = catchAsyncErrors(async (req, res, next) => {
         amount: invoice.subTotal,
         tax: invoice.tax,
         total: invoice.totalAmount,
-        isVatApplicable: invoice.isVatApplicable,
+        isVatApplicable: vatApplicable,
         paymentMethod: "Cash",
         description: `Payment received for invoice #${invoice.invoiceNumber}`,
         date: invoice.date,
