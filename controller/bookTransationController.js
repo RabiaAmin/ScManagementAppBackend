@@ -24,8 +24,7 @@ export const addTransaction = catchAsyncErrors(async (req, res, next) => {
     !amount ||
     !total ||
     !paymentMethod ||
-    !date 
-  
+    !date
   ) {
     return next(new ErrorHandler("Please fill all required fields", 400));
   }
@@ -110,7 +109,10 @@ export const deleteTransaction = catchAsyncErrors(async (req, res, next) => {
 export const getTransactionsByDate = catchAsyncErrors(
   async (req, res, next) => {
     const { _id } = req.user;
-    let { startDate, endDate } = req.query;
+    let { startDate, endDate, page = 1, limit = 40 } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
 
     if (!startDate || !endDate) {
       const now = new Date();
@@ -132,12 +134,17 @@ export const getTransactionsByDate = catchAsyncErrors(
       user: _id,
       date: { $gte: new Date(startDate), $lte: new Date(endDate) },
     })
-      .populate("clientId category relatedInvoice relatedExpense")
-      .sort({ date: -1 });
+      .sort({ _id: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .populate("clientId category relatedInvoice relatedExpense");
 
+    const totalRecords = await BookTransaction.countDocuments();
     res.status(200).json({
       success: true,
       count: transactions.length,
+      totalPages: Math.ceil(totalRecords / limit),
+      page,
       transactions,
     });
   }
@@ -356,7 +363,10 @@ export const getVatSummaryReport = catchAsyncErrors(async (req, res, next) => {
     const entry = {
       _id: t._id,
       date: t.date,
-      reference: t.relatedInvoice?.invoiceNumber || t.relatedExpense?.invoiceNo || "Manual Entry",
+      reference:
+        t.relatedInvoice?.invoiceNumber ||
+        t.relatedExpense?.invoiceNo ||
+        "Manual Entry",
       customerOrSupplier: t.clientName || t.suplierName || "-",
       taxableAmount,
       vatRate: "15%",
@@ -393,5 +403,280 @@ export const getVatSummaryReport = catchAsyncErrors(async (req, res, next) => {
   res.status(200).json({
     success: true,
     report: vatReport,
+  });
+});
+
+export const getVatLedger = catchAsyncErrors(async (req, res, next) => {
+  if (!req.user) {
+    return next(new ErrorHandler("User not authenticated", 401));
+  }
+
+  let { startDate, endDate } = req.query;
+
+  if (!startDate || !endDate) {
+    return next(new ErrorHandler("Start and End date are required", 400));
+  }
+
+  // Fetch VAT transactions
+  const transactions = await BookTransaction.find({
+    user: req.user._id,
+    isVatApplicable: true,
+    date: { $gte: new Date(startDate), $lte: new Date(endDate) },
+  })
+    .sort({ date: 1 })
+    .populate("category")
+    .populate("relatedInvoice")
+    .populate("relatedExpense");
+
+  // -----------------------------------------
+  // LEDGER STRUCTURE
+  // -----------------------------------------
+  let ledgerReport = {
+    period: { startDate, endDate },
+
+    openingBalance: 0,
+    closingBalance: 0,
+
+    summary: {
+      totalOutputVAT: 0,
+      totalInputVAT: 0,
+      netVAT: 0,
+    },
+
+    ledger: [],
+  };
+
+  let runningBalance = 0;
+
+  // -----------------------------------------
+  // PROCESS LEDGER TRANSACTIONS
+  // -----------------------------------------
+  transactions.forEach((t) => {
+    const vatAmount = Number(t.tax) || 0;
+    const taxableAmount = Number(t.amount) || 0;
+
+    const isOutput = t.transactionType === "INCOME"; // Output VAT
+    const isInput = t.transactionType === "EXPENSE"; // Input VAT
+
+    // Update summary totals
+    if (isOutput) ledgerReport.summary.totalOutputVAT += vatAmount;
+    if (isInput) ledgerReport.summary.totalInputVAT += vatAmount;
+
+    // Running Balance Logic
+    if (isOutput) runningBalance += vatAmount; // Payable
+    if (isInput) runningBalance -= vatAmount; // Claimable
+
+    const entry = {
+      date: t.date,
+      reference:
+        t.relatedInvoice?.invoiceNumber ||
+        t.relatedExpense?.invoiceNo ||
+        "Manual Entry",
+
+      description: t.category?.name || t.incomeCategory || "-",
+
+      type: isOutput ? "OUTPUT" : "INPUT",
+
+      taxableAmount,
+      vatRate: 15, // SA VAT Constant
+      vatAmount,
+
+      debit: isInput ? vatAmount : 0,
+      credit: isOutput ? vatAmount : 0,
+
+      balance: Number(runningBalance.toFixed(2)),
+    };
+
+    ledgerReport.ledger.push(entry);
+  });
+
+  // Final calculations
+  ledgerReport.summary.totalOutputVAT = Number(
+    ledgerReport.summary.totalOutputVAT.toFixed(2)
+  );
+
+  ledgerReport.summary.totalInputVAT = Number(
+    ledgerReport.summary.totalInputVAT.toFixed(2)
+  );
+
+  ledgerReport.summary.netVAT = Number(
+    (
+      ledgerReport.summary.totalOutputVAT - ledgerReport.summary.totalInputVAT
+    ).toFixed(2)
+  );
+
+  ledgerReport.closingBalance = ledgerReport.summary.netVAT;
+
+  // -----------------------------------------
+  // SEND FINAL REPORT JSON
+  // -----------------------------------------
+  res.status(200).json({
+    success: true,
+    report: ledgerReport,
+  });
+});
+
+export const getGeneralLedger = catchAsyncErrors(async (req, res, next) => {
+  if (!req.user) {
+    return next(new ErrorHandler("User not authenticated", 401));
+  }
+
+  let { startDate, endDate } = req.query;
+
+  if (!startDate || !endDate) {
+    return next(new ErrorHandler("Start and End date are required", 400));
+  }
+
+  // Fetch ALL transactions (Income + Expense)
+  const transactions = await BookTransaction.find({
+    user: req.user._id,
+    date: { $gte: new Date(startDate), $lte: new Date(endDate) },
+  })
+    .sort({ date: 1 }) // ledger must be chronological
+    .populate("category")
+    .populate("relatedInvoice")
+    .populate("relatedExpense");
+
+  // ----------------------------------------------------
+  // INITIAL LEDGER STRUCTURE
+  // ----------------------------------------------------
+  let generalLedger = {
+    period: { startDate, endDate },
+
+    openingBalance: 0, // optional enhancement for future
+    closingBalance: 0,
+
+    totalIncome: 0,
+    totalExpense: 0,
+
+    ledgerEntries: [],
+  };
+
+  // Running balance (income increases, expense decreases)
+  let runningBalance = 0;
+
+  // ----------------------------------------------------
+  // PROCESS ALL TRANSACTIONS
+  // ----------------------------------------------------
+  transactions.forEach((t) => {
+    const amount = Number(t.amount) || 0;
+
+    const isIncome = t.transactionType === "INCOME";
+    const isExpense = t.transactionType === "EXPENSE";
+
+    // Running Balance Logic
+    if (isIncome) {
+      generalLedger.totalIncome += amount;
+      runningBalance += amount; // increase balance
+    }
+
+    if (isExpense) {
+      generalLedger.totalExpense += amount;
+      runningBalance -= amount; // decrease balance
+    }
+
+    const entry = {
+      _id: t._id,
+      date: t.date,
+      reference:
+        t.relatedInvoice?.invoiceNumber ||
+        t.relatedExpense?.invoiceNo ||
+        "Manual Entry",
+
+      description:
+        t.category?.name || t.incomeCategory || t.expenseCategory || "-",
+
+      type: isIncome ? "Income" : "Expense",
+
+      debit: isExpense ? amount : 0, // expenses = debit
+      credit: isIncome ? amount : 0, // income = credit
+
+      amount,
+      runningBalance: Number(runningBalance.toFixed(2)),
+    };
+
+    generalLedger.ledgerEntries.push(entry);
+  });
+
+  // Final Closing Balance
+  generalLedger.closingBalance = Number(runningBalance.toFixed(2));
+
+  // ----------------------------------------------------
+  // SEND RESPONSE TO FRONTEND FOR PDF
+  // ----------------------------------------------------
+  res.status(200).json({
+    success: true,
+    report: generalLedger,
+  });
+});
+
+export const getCashFlowReport = catchAsyncErrors(async (req, res, next) => {
+  // 1. Auth check
+  if (!req.user) {
+    return next(new ErrorHandler("User not authenticated", 401));
+  }
+
+  // 2. Validate query params
+  let { startDate, endDate } = req.query;
+  if (!startDate || !endDate) {
+    return next(new ErrorHandler("Start and End date are required", 400));
+  }
+
+  // 3. Fetch all transactions in period
+  const transactions = await BookTransaction.find({
+    user: req.user._id,
+    date: { $gte: new Date(startDate), $lte: new Date(endDate) },
+  })
+    .sort({ date: 1 }) // chronological order
+    .populate("category")
+    .populate("relatedInvoice")
+    .populate("relatedExpense");
+
+  // 4. Initialize report structure
+  let report = {
+    period: { startDate, endDate },
+    totalCashInflow: 0,
+    totalCashOutflow: 0,
+    netCashFlow: 0,
+    inflowTransactions: [],
+    outflowTransactions: [],
+  };
+
+  // 5. Process transactions
+  transactions.forEach((t) => {
+    const amount = Number(t.amount) || 0;
+
+    const isInflow = t.transactionType === "INCOME"; // cash coming in
+    const isOutflow = t.transactionType === "EXPENSE"; // cash going out
+
+    const entry = {
+      _id: t._id,
+      date: t.date,
+      reference:
+        t.relatedInvoice?.invoiceNumber ||
+        t.relatedExpense?.invoiceNo ||
+        "Manual Entry",
+      description:
+        t.category?.name || t.incomeCategory || t.expenseCategory || "-",
+      type: isInflow ? "Inflow" : "Outflow",
+      amount,
+    };
+
+    if (isInflow) {
+      report.totalCashInflow += amount;
+      report.inflowTransactions.push(entry);
+    } else if (isOutflow) {
+      report.totalCashOutflow += amount;
+      report.outflowTransactions.push(entry);
+    }
+  });
+
+  // 6. Net cash flow
+  report.netCashFlow = report.totalCashInflow - report.totalCashOutflow;
+
+  // 7. Send response
+  res.status(200).json({
+    success: true,
+    report,
   });
 });
