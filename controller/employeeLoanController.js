@@ -72,7 +72,7 @@ export const getLoansByEmployee = catchAsyncErrors(async (req, res ,next) => {
   const loans = await EmployeeLoan.find({
     employee: employeeId,
     isActive: true,
-  });
+  }).populate("employee", "name department");
 
   const totalLoans = loans.length;
 
@@ -83,8 +83,6 @@ export const getLoansByEmployee = catchAsyncErrors(async (req, res ,next) => {
   res.status(200).json({ success: true,employee, loans , totalLoans, totalLoanAmount, totalPaidAmount});
 });
 
-
-// ================= PAY EMI =================
 
 export const payEmi = catchAsyncErrors(async (req, res, next) => {
   const loan = await EmployeeLoan.findById(req.params.id);

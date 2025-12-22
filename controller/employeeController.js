@@ -29,21 +29,11 @@ export const addEmployee = catchAsyncErrors(async (req, res, next) => {
 
   // ✅ TIME BASED EMPLOYEE
   if (payType === "TIME_BASED") {
-    if (!weeklyPayment && !hourlyRate) {
+    if (!hourlyRate) {
       return next(
-        new ErrorHandler("Weekly payment or hourly rate is required", 400)
+        new ErrorHandler("hourly rate is required", 400)
       );
     }
-
-    // ✅ STANDARD FORMULA (6 days × 8 hours = 48 hours)
-    const WORKING_DAYS = 6;
-    const WORKING_HOURS = 8;
-    const TOTAL_WEEKLY_HOURS = WORKING_DAYS * WORKING_HOURS;
-
-    finalHourlyRate = weeklyPayment
-      ? Number((weeklyPayment / TOTAL_WEEKLY_HOURS).toFixed(2))
-      : hourlyRate;
-
     finalMonthlySalary = undefined;
     finalPerPieceRate = undefined;
   }
