@@ -48,9 +48,11 @@ app.use("/api/v1/user",userRoute);
 app.use("/api/v1/business",businessRoute);
 app.use("/api/v1/client",clientRoute);
 app.use("/api/v1/business/invoice",invoiceRoute);
+app.use('/api/v1/bankAccount',bankAccountRoute);
+
+
 app.use('/api/v1/expenseCategory', expenseCategoryRoute);
 app.use('/api/v1/expense', expenseRoute);
-app.use('/api/v1/bankAccount',bankAccountRoute);
 app.use('/api/v1/bankTransaction',bookTransactionRoute);
 app.use('/api/v1/employee', employeeRoute);
 app.use("/api/v1/employee/loan", employeeLoanRouter);
